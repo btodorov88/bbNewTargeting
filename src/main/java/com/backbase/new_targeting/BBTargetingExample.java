@@ -10,6 +10,8 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.model.MulticastDefinition;
 
+import java.util.concurrent.Future;
+
 
 public final class BBTargetingExample {
 
@@ -34,7 +36,7 @@ public final class BBTargetingExample {
         context.addRoutes(new RouteBuilder() {
             public void configure() {
 
-                MulticastDefinition multiCast = from("direct:executeCollectors")
+                MulticastDefinition multiCast = from("direct:executeCollectors").setExchangePattern(ExchangePattern.InOut)
                         .multicast(new AgregationStrategy()).parallelProcessing().timeout(TIMEOUT);
 
                 // Setup collectors
@@ -59,6 +61,20 @@ public final class BBTargetingExample {
 
         System.out.println("----------End result---------");
         System.out.println(result.getOut().getBody());
+        System.out.println("-----------------------------");
+    }
+
+    private static void startCollectorsAsync(CamelContext context) throws Exception{
+        ProducerTemplate producerTemplate = context.createProducerTemplate();
+        Future<Exchange> result = producerTemplate.asyncSend("direct:executeCollectors", new Processor() {
+            @Override
+            public void process(Exchange exchange) throws Exception {
+                exchange.getIn().setBody("Initial Message");
+            }
+        });
+
+        System.out.println("----------End result---------");
+        System.out.println(result.get().getOut().getBody());
         System.out.println("-----------------------------");
     }
 }
